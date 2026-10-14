@@ -14,12 +14,16 @@ function artwork(name,x,y,w,h,outlined=false){
  const holder=spec.rotate?document.createElementNS(NS,'g'):e;if(spec.rotate){holder.setAttribute('transform','rotate(90)');e.append(holder);}
  spec.lines.forEach((line,i)=>{const text=document.createElementNS(NS,'text');text.textContent=line;
  text.setAttribute('x',0);text.setAttribute('y',i*110);text.setAttribute('font-family',spec.family);text.setAttribute('font-size',100);text.setAttribute('font-weight',400);
- text.setAttribute('fill',outlined?'none':(name==='courage'||name==='suffix'?'black':'#ffffff'));
+ text.setAttribute('fill',outlined?'none':(['courage','suffix','courageMore'].includes(name)?'black':'#ffffff'));
  if(outlined){text.setAttribute('stroke','#aaa');text.setAttribute('stroke-width',.65);text.setAttribute('vector-effect','non-scaling-stroke');}
  holder.append(text);});return e;
 }
 $('bravery').replaceChildren(artwork('courage',0,0,309,115));
 const suffixArtwork=artwork('suffix',75,-74,234,74);suffixArtwork.setAttribute('id','suffix');$('bravery').append(suffixArtwork);
+// Shown when the 용기 side reaches 55% or more: "용기가 많아진다고 / 생각을 잃진 않으니까".
+const courageMore=artwork('courageMore',60,-78,250,70);courageMore.setAttribute('opacity',0);$('bravery').append(courageMore);
+const notLose=artwork('notLose',92,212,330,62);notLose.setAttribute('opacity',0);$('words').after(notLose);
+let q=0;
 const words=[
  ['increases',465,139,234,66,0.08],
  ['worry',104,269,193,137,0.10],
@@ -46,6 +50,8 @@ function draw(dt){const stage=p*7,i=Math.min(6,Math.floor(stage)),t=stage-i;
  const movement=active?clamp((slope*px+intercept-py)/570*.30,-.15,.15):0;
  offset=mix(offset,movement,1-Math.exp(-dt*4));
  const r=clamp(mix(ratios[i],ratios[i+1],t)+offset*(1-p),.35,1);
+ q=mix(q,Math.round((1-r)*100)>=55?1:0,1-Math.exp(-dt*2.5));
+ const qv=q*(1-fadeAt(p,.03,.05));courageMore.setAttribute('opacity',qv);notLose.setAttribute('opacity',qv);
  intercept=boundary(slope,r);
  const shape=area(slope,intercept).points;const d='M'+shape.map(a=>a.join(' ')).join('L')+'Z';
  $('background').setAttribute('d',d);$('blackPath').setAttribute('d',d);
@@ -62,7 +68,7 @@ function draw(dt){const stage=p*7,i=Math.min(6,Math.floor(stage)),t=stage-i;
  const courageScales=[1,.84,.70,.62,.43,.27,.25,0];let cs=mix(courageScales[i],courageScales[i+1],t);
  const bx=mix([574,650,695,716,775,817,825,930][i],[574,650,695,716,775,817,825,930][i+1],t);
  const by=mix([354,378,399,410,430,450,467,560][i],[354,378,399,410,430,450,467,560][i+1],t);
- cs*=cb;$('bravery').setAttribute('transform',`translate(${bx} ${by}) scale(${cs})`);$('suffix').setAttribute('opacity',fadeAt(p,.08));
+ cs*=Math.min(1.3,cb*(1+.2*q));$('bravery').setAttribute('transform',`translate(${bx} ${by}) scale(${cs})`);$('suffix').setAttribute('opacity',fadeAt(p,.08)*(1-q));
  const n=Math.round(r*100);if(n!==leftCache){number($('leftNumber'),n,79,50,false,mix(28,64,clamp((n-35)/65)));leftCache=n;}if(100-n!==rightCache){number($('rightNumber'),100-n,900,495,true);rightCache=100-n;}
  $('rightNumber').setAttribute('transform',`translate(${clamp(bx+309*cs+47,70,937)} ${clamp(by+115*cs+26,30,537)})`);
  // Place the compass halfway along the visible dividing line.
