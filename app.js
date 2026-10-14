@@ -21,8 +21,18 @@ function artwork(name,x,y,w,h,outlined=false){
 $('bravery').replaceChildren(artwork('courage',0,0,309,115));
 const suffixArtwork=artwork('suffix',75,-74,234,74);suffixArtwork.setAttribute('id','suffix');$('bravery').append(suffixArtwork);
 // Shown when the 용기 side reaches 55% or more: "용기가 많아진다고 / 생각을 잃진 않으니까".
-const courageMore=artwork('courageMore',60,-78,250,70);courageMore.setAttribute('opacity',0);$('bravery').append(courageMore);
-const notLose=artwork('notLose',92,212,330,62);notLose.setAttribute('opacity',0);$('words').after(notLose);
+// Plain <text> so the real glyph edges can be measured for exact left/right alignment.
+function plainText(str,size,fill){const t=document.createElementNS(NS,'text');t.textContent=str;t.setAttribute('font-family','Pear');t.setAttribute('font-size',size);t.setAttribute('fill',fill);t.setAttribute('opacity',0);return t;}
+const courageMore=plainText('많아진다고',58,'black');$('bravery').append(courageMore);
+const notLose=plainText('을 잃진 않으니까',56,'#ffffff');$('words').after(notLose);
+const courageText=$('bravery').querySelector('svg text'),courageK=Math.min(309/169.3,115/61.4);
+// Left-align "을 잃진 않으니까" under 생각, right-align "많아진다고" above 용기 (measured ink edges).
+function alignPhrases(tx,ty,s){
+ const tb2=$('thought').getBBox();if(tb2.width){const left=tx+tb2.x*s,bottom=ty+(tb2.y+tb2.height)*s;
+  notLose.setAttribute('y',bottom+25+56*.8);const nb=notLose.getBBox();notLose.setAttribute('x',(+notLose.getAttribute('x')||0)+left-nb.x);}
+ const cb2=courageText.getBBox();const right=(cb2.x+cb2.width-3)*courageK,top=(cb2.y+57.4)*courageK;
+ courageMore.setAttribute('y',top-22);const mb=courageMore.getBBox();courageMore.setAttribute('x',(+courageMore.getAttribute('x')||0)+right-(mb.x+mb.width));
+}
 let q=0;
 const words=[
  ['increases',465,139,234,66,0.08],
@@ -58,7 +68,9 @@ function draw(dt){const stage=p*7,i=Math.min(6,Math.floor(stage)),t=stage-i;
  $('whitePath').setAttribute('d',`M0 0H1016V570H0Z ${d}`);$('whitePath').setAttribute('clip-rule','evenodd');
  const fi=Math.min(5,stage),a=Math.min(4,Math.floor(fi)),ft=fi-a;
  if(frames){$('saeng').setAttribute('d',path(frames[a][0],frames[a+1][0],ft));$('gak').setAttribute('d',path(frames[a][1],frames[a+1][1],ft));}
- $('thought').setAttribute('transform',`translate(${mix(xs[i],xs[i+1],t)} ${mix(96,100,clamp(stage))}) scale(${mix(scales[i],scales[i+1],t)*(1+(tb-1)*(1-p))})`);
+ const ttx=mix(xs[i],xs[i+1],t),tty=mix(96,100,clamp(stage)),ts=mix(scales[i],scales[i+1],t)*(1+(tb-1)*(1-p));
+ $('thought').setAttribute('transform',`translate(${ttx} ${tty}) scale(${ts})`);
+ if(qv>0.001)alignPhrases(ttx,tty,ts);
  words.forEach(({e,name,at})=>{let opacity=name==='more'?fadeAt(p,.96,.03):fadeAt(p,at);if(name==='increases')opacity*=1-fadeAt(p,.97,.03);e.setAttribute('opacity',opacity);
  if(name==='increases'){e.setAttribute('x',mix(465,522,clamp(stage-1)));e.setAttribute('y',mix(139,154,clamp(stage-1)));}
  if(name==='hesitate') e.setAttribute('width',457);});
