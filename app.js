@@ -23,15 +23,16 @@ const suffixArtwork=artwork('suffix',75,-74,234,74);suffixArtwork.setAttribute('
 // Shown when the 용기 side reaches 55% or more: "용기가 많아진다고 / 생각을 잃진 않으니까".
 // Plain <text> so the real glyph edges can be measured for exact left/right alignment.
 function plainText(str,size,fill){const t=document.createElementNS(NS,'text');t.textContent=str;t.setAttribute('font-family','Pear');t.setAttribute('font-size',size);t.setAttribute('fill',fill);t.setAttribute('opacity',0);return t;}
+const NOTLOSE_SIZE=50; // '을 잃진 않으니까' font size
 const courageMore=plainText('많아진다고',58,'black');$('bravery').append(courageMore);
-const notLose=plainText('을 잃진 않으니까',56,'#ffffff');$('words').after(notLose);
+const notLose=plainText('을 잃진 않으니까',NOTLOSE_SIZE,'#ffffff');$('words').after(notLose);
 const courageText=$('bravery').querySelector('svg text'),courageK=Math.min(309/169.3,115/61.4);
 // Left-align "을 잃진 않으니까" under 생각, right-align "많아진다고" above 용기.
 // Canvas measureText gives true ink bounds (SVG getBBox includes empty ascent space), so both gaps match exactly.
 const inkCtx=document.createElement('canvas').getContext('2d'),GAP=25;let lastCs=1;
 function ink(str,size,family){inkCtx.font=`${size}px ${family}`;return inkCtx.measureText(str);}
 function alignPhrases(tx,ty,s){
- const tb2=$('thought').getBBox();if(tb2.width){const left=tx+tb2.x*s,bottom=ty+(tb2.y+tb2.height)*s,m=ink(notLose.textContent,56,'Pear');
+ const tb2=$('thought').getBBox();if(tb2.width){const left=tx+tb2.x*s,bottom=ty+(tb2.y+tb2.height)*s,m=ink(notLose.textContent,NOTLOSE_SIZE,'Pear');
   notLose.setAttribute('x',left+m.actualBoundingBoxLeft);notLose.setAttribute('y',bottom+GAP+m.actualBoundingBoxAscent);}
  const c=ink('용기',100,'Neurimbo'),right=(c.actualBoundingBoxRight-3)*courageK,top=(57.4-c.actualBoundingBoxAscent)*courageK,m2=ink(courageMore.textContent,58,'Pear');
  courageMore.setAttribute('x',right-m2.actualBoundingBoxRight);courageMore.setAttribute('y',top-GAP/lastCs-m2.actualBoundingBoxDescent);
