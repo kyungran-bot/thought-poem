@@ -5,7 +5,7 @@ const ratios=[.5,.56,.65,.75,.85,.90,.95,1];
 const slopes=[-570/1016,-.5,-.60,-.8,-.83,-.56,-.35,-.35];
 const scales=[.46,.53,.59,.59,.59,.59,.59,.59];
 const xs=[120,100,100,110,110,110,110,110];
-let frames,active=false,p=0,dwell=0,inside=false,hover=false,px=508,py=285,originX=508,originY=285,angle=-.511,targetAngle=-.511,offset=0,slope=slopes[0],intercept=570,last=0;
+let frames,active=false,p=0,cp=0,dwell=0,inside=false,hover=false,px=508,py=285,originX=508,originY=285,angle=-.511,targetAngle=-.511,offset=0,slope=slopes[0],intercept=570,last=0;
 function artwork(name,x,y,w,h,outlined=false){
  const spec=typography[name],e=document.createElementNS(NS,'svg');
  // 'meet' keeps the original letter proportions; overflow visible prevents glyph edges from being cut.
@@ -60,12 +60,13 @@ function boundary(m,r){let lo=-1200,hi=2000;for(let i=0;i<34;i++){let b=(lo+hi)/
 function path(a,b,t){return a.map((c,i)=>c[0]+c.slice(1).map((v,k)=>mix(v,b[i][k+1],t).toFixed(3)).join(' ')).join(' ');}
 function fadeAt(x,at,width=.045){return clamp((x-at)/width);}
 function draw(dt){const stage=p*7,i=Math.min(6,Math.floor(stage)),t=stage-i;
- slope=mix(slopes[i],slopes[i+1],t);
- const movement=active?clamp((slope*px+intercept-py)/570*.30,-.15,.15):0;
- offset=mix(offset,movement,1-Math.exp(-dt*4));
- const r=clamp(mix(ratios[i],ratios[i+1],t)+offset*(1-p),.35,1);
+ slope=p>0?mix(slopes[i],slopes[i+1],t):mix(slopes[0],-.42,cp);
+ const movement=active?clamp((slope*px+intercept-py)/570*.05,-.015,.015):0;
+ offset=mix(offset,movement,1-Math.exp(-dt*3));
+ const baseR=p>0?mix(ratios[i],ratios[i+1],t):mix(.50,.35,cp);
+ const r=clamp(baseR+offset,.35,1);
  const isCourage=Math.round((1-r)*100)>=55;
- q=isCourage?1:mix(q,0,1-Math.exp(-dt*12));
+ q=mix(q,isCourage?1:0,1-Math.exp(-dt*4));
  courageMore.setAttribute('opacity',q);notLose.setAttribute('opacity',q);
  intercept=boundary(slope,r);
  const shape=area(slope,intercept).points;const d='M'+shape.map(a=>a.join(' ')).join('L')+'Z';
@@ -85,7 +86,7 @@ function draw(dt){const stage=p*7,i=Math.min(6,Math.floor(stage)),t=stage-i;
  const courageScales=[1,.84,.70,.62,.43,.27,.25,0];let cs=mix(courageScales[i],courageScales[i+1],t);
  const bx=mix([574,650,695,716,775,817,825,930][i],[574,650,695,716,775,817,825,930][i+1],t);
  const by=mix([354,378,399,410,430,450,467,560][i],[354,378,399,410,430,450,467,560][i+1],t);
- cs*=Math.min(1.3,cb*(1+.2*q));lastCs=cs||1;$('bravery').setAttribute('transform',`translate(${bx} ${by}) scale(${cs})`);$('suffix').setAttribute('opacity',fadeAt(p,.08)*(1-q));
+ cs*=Math.min(1.25,cb*(1+.12*q));lastCs=cs||1;$('bravery').setAttribute('transform',`translate(${bx} ${by}) scale(${cs})`);$('suffix').setAttribute('opacity',fadeAt(p,.08)*(1-q));
  const n=Math.round(r*100);if(n!==leftCache){number($('leftNumber'),n,79,50,false,mix(28,64,clamp((n-35)/65)));leftCache=n;}if(100-n!==rightCache){number($('rightNumber'),100-n,900,495,true);rightCache=100-n;}
  $('rightNumber').setAttribute('transform',`translate(${clamp(bx+309*cs+47,70,937)} ${clamp(by+115*cs+26,30,537)})`);
  // Place the compass halfway along the visible dividing line.
@@ -99,12 +100,22 @@ function draw(dt){const stage=p*7,i=Math.min(6,Math.floor(stage)),t=stage-i;
 let tb=1,cb=1;
 function tick(time){const dt=Math.min(.05,(time-last)/1000||0);last=time;
  tb=active&&hover?Math.min(1.12,tb+dt*.04):Math.max(1,tb-dt*.15);
- cb=active&&inside&&!hover?Math.min(1.25,cb+dt*.06):Math.max(1,cb-dt*.15);
- if(active&&hover&&p<1){dwell+=dt;p=clamp(p+dt/8);}else if(!hover){dwell=0;if(active&&inside)p=clamp(p-dt/8);}draw(dt);requestAnimationFrame(tick);}
+ cb=active&&inside&&!hover?Math.min(1.15,cb+dt*.03):Math.max(1,cb-dt*.12);
+ if(active&&hover){
+  if(cp>0)cp=Math.max(0,cp-dt/3);
+  else if(p<1)p=clamp(p+dt/8);
+ }else if(active&&inside&&!hover){
+  if(p>0)p=Math.max(0,p-dt/4);
+  else cp=clamp(cp+dt/7);
+ }else if(active){
+  if(p>0)p=Math.max(0,p-dt/8);
+  if(cp>0)cp=Math.max(0,cp-dt/6);
+ }
+ draw(dt);requestAnimationFrame(tick);}
 function move(e){const r=$('art').getBoundingClientRect(),nx=(e.clientX-r.left)/r.width*1016,ny=(e.clientY-r.top)/r.height*570;const dx=nx-px,dy=ny-py;if(Math.hypot(dx,dy)>.5)targetAngle=Math.atan2(dy,dx);px=nx;py=ny;inside=true;const dot=$('cursorDot');dot.style.left=e.clientX+'px';dot.style.top=e.clientY+'px';dot.style.opacity=e.pointerType==='touch'?'0':'1';}
 $('art').addEventListener('pointermove',move);$('art').addEventListener('pointerleave',()=>{inside=false;hover=false;dwell=0;$('cursorDot').style.opacity=0;});
 function start(){active=true;originX=px;originY=py;inside=true;$('start').hidden=true;$('help').style.opacity=0;}
-function reset(){active=false;p=0;tb=1;cb=1;q=0;dwell=0;offset=0;leftCache=rightCache=-1;courageMore.setAttribute('opacity',0);notLose.setAttribute('opacity',0);$('start').hidden=false;$('help').style.opacity=1;}
+function reset(){active=false;p=0;cp=0;tb=1;cb=1;q=0;dwell=0;offset=0;leftCache=rightCache=-1;courageMore.setAttribute('opacity',0);notLose.setAttribute('opacity',0);$('start').hidden=false;$('help').style.opacity=1;}
 $('start').addEventListener('pointerdown',e=>{move(e);start();});$('start').addEventListener('click',()=>{if(!active){px=200;py=150;start();}});$('reset').addEventListener('click',reset);
 document.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r'||e.key==='Escape')reset();});
 document.addEventListener('visibilitychange',()=>{inside=false;hover=false;dwell=0;$('cursorDot').style.opacity=0;});
