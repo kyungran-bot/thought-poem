@@ -27,15 +27,15 @@ const NOTLOSE_SIZE=50; // '을 잃진 않으니까' font size
 const courageMore=plainText('많아진다고',58,'black');$('bravery').append(courageMore);
 const notLose=plainText('을 잃진 않으니까',NOTLOSE_SIZE,'#ffffff');$('words').after(notLose);
 const courageText=$('bravery').querySelector('svg text'),courageK=Math.min(309/169.3,115/61.4);
-// Left-align "을 잃진 않으니까" under 생각, right-align "많아진다고" above 용기.
-// Canvas measureText gives true ink bounds (SVG getBBox includes empty ascent space), so both gaps match exactly.
-const inkCtx=document.createElement('canvas').getContext('2d'),GAP=25;let lastCs=1;
+const inkCtx=document.createElement('canvas').getContext('2d'),GAP=25;
 function ink(str,size,family){inkCtx.font=`${size}px ${family}`;return inkCtx.measureText(str);}
-function alignPhrases(tx,ty,s){
+// Position '많아진다고' statically in bravery's coordinate space so it never wobbles or fights scale:
+const c=ink('용기',100,'Neurimbo'),cRight=(c.actualBoundingBoxRight-3)*courageK,cTop=(57.4-c.actualBoundingBoxAscent)*courageK,m2=ink('많아진다고',58,'Pear');
+courageMore.setAttribute('x',cRight-m2.actualBoundingBoxRight);
+courageMore.setAttribute('y',cTop-22-m2.actualBoundingBoxDescent);
+function alignNotLose(tx,ty,s){
  const tb2=$('thought').getBBox();if(tb2.width){const left=tx+tb2.x*s,bottom=ty+(tb2.y+tb2.height)*s,m=ink(notLose.textContent,NOTLOSE_SIZE,'Pear');
   notLose.setAttribute('x',left+m.actualBoundingBoxLeft);notLose.setAttribute('y',bottom+GAP+m.actualBoundingBoxAscent);}
- const c=ink('용기',100,'Neurimbo'),right=(c.actualBoundingBoxRight-3)*courageK,top=(57.4-c.actualBoundingBoxAscent)*courageK,m2=ink(courageMore.textContent,58,'Pear');
- courageMore.setAttribute('x',right-m2.actualBoundingBoxRight);courageMore.setAttribute('y',top-GAP/lastCs-m2.actualBoundingBoxDescent);
 }
 let q=0;
 const words=[
@@ -76,7 +76,7 @@ function draw(dt){const stage=p*7,i=Math.min(6,Math.floor(stage)),t=stage-i;
  if(frames){$('saeng').setAttribute('d',path(frames[a][0],frames[a+1][0],ft));$('gak').setAttribute('d',path(frames[a][1],frames[a+1][1],ft));}
  const ttx=mix(xs[i],xs[i+1],t),tty=mix(96,100,clamp(stage)),ts=mix(scales[i],scales[i+1],t)*(1+(tb-1)*(1-p));
  $('thought').setAttribute('transform',`translate(${ttx} ${tty}) scale(${ts})`);
- if(q>0.001)alignPhrases(ttx,tty,ts);
+ if(q>0.001)alignNotLose(ttx,tty,ts);
  words.forEach(({e,name,at})=>{let opacity=name==='more'?fadeAt(p,.96,.03):fadeAt(p,at);if(name==='increases')opacity*=1-fadeAt(p,.97,.03);e.setAttribute('opacity',opacity);
  if(name==='increases'){e.setAttribute('x',mix(465,522,clamp(stage-1)));e.setAttribute('y',mix(139,154,clamp(stage-1)));}
  if(name==='hesitate') e.setAttribute('width',457);});
@@ -86,7 +86,7 @@ function draw(dt){const stage=p*7,i=Math.min(6,Math.floor(stage)),t=stage-i;
  const courageScales=[1,.84,.70,.62,.43,.27,.25,0];let cs=mix(courageScales[i],courageScales[i+1],t);
  const bx=mix([574,650,695,716,775,817,825,930][i],[574,650,695,716,775,817,825,930][i+1],t);
  const by=mix([354,378,399,410,430,450,467,560][i],[354,378,399,410,430,450,467,560][i+1],t);
- cs*=Math.min(1.25,cb*(1+.12*q));lastCs=cs||1;$('bravery').setAttribute('transform',`translate(${bx} ${by}) scale(${cs})`);$('suffix').setAttribute('opacity',fadeAt(p,.08)*(1-q));
+ cs*=(1+0.16*cp);lastCs=cs||1;$('bravery').setAttribute('transform',`translate(${bx} ${by}) scale(${cs})`);$('suffix').setAttribute('opacity',fadeAt(p,.08)*(1-q));
  const n=Math.round(r*100);if(n!==leftCache){number($('leftNumber'),n,79,50,false,mix(28,64,clamp((n-35)/65)));leftCache=n;}if(100-n!==rightCache){number($('rightNumber'),100-n,900,495,true);rightCache=100-n;}
  $('rightNumber').setAttribute('transform',`translate(${clamp(bx+309*cs+47,70,937)} ${clamp(by+115*cs+26,30,537)})`);
  // Place the compass halfway along the visible dividing line.
