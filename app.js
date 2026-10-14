@@ -64,7 +64,7 @@ function draw(dt){const stage=p*7,i=Math.min(6,Math.floor(stage)),t=stage-i;
  const movement=active?clamp((slope*px+intercept-py)/570*.30,-.15,.15):0;
  offset=mix(offset,movement,1-Math.exp(-dt*4));
  const r=clamp(mix(ratios[i],ratios[i+1],t)+offset*(1-p),.35,1);
- const isCourage=Math.round((1-r)*100)>50;
+ const isCourage=Math.round((1-r)*100)>=55;
  q=isCourage?1:mix(q,0,1-Math.exp(-dt*12));
  courageMore.setAttribute('opacity',q);notLose.setAttribute('opacity',q);
  intercept=boundary(slope,r);
