@@ -87,7 +87,7 @@ const phrases = {};
 function buildPhrases() {
     for (const [key, [str, colour]] of Object.entries(D.phrases)) {
         const e = document.createElementNS(NS, 'text'); e.textContent = str; e.setAttribute('font-family', 'Pear'); e.setAttribute('opacity', 0);
-        (colour === 'white' ? $('blackText') : $('whiteText')).append(e); // Pear phrases keep their own colour (no inversion)
+        $('labels').append(e); // filled phrases: white + difference blend = always the opposite colour of what is underneath (outlined words are not inverted)
         phrases[key] = { e, m: ink(str, 'Pear'), n: [...str].length };
     }
 }
