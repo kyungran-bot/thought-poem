@@ -60,6 +60,8 @@ NUM_L_SHOW = {n: 0 if n == 'C100' else 1 for n in ORDER}  # 생각 is gone at �
 SLIDE = set()
 # steps where shapes should pair by where they are on screen (the long band retracts into the short leg)
 NEAR = {('T90a', 'T90b', 'thought', 5)}
+# outlined words (Pear) that pop in one by one up to the 59 scene (screenshot at s = 0.4056) and pop out before 65
+WORDS = [{"text": "음...", "box": [527.5, 365.0, 666.9, 448.9], "rot": 180, "in": 0.04, "out": 0.49}, {"text": "고민 불안", "box": [1266.2, 265.3, 1477.4, 342.4], "rot": 0, "in": 0.09, "out": 0.475}, {"text": "어떡하지", "box": [850.9, 226.7, 1096.4, 331.0], "rot": 0, "in": 0.14, "out": 0.46}, {"text": "할까말까", "box": [716.5, 518.1, 877.1, 582.7], "rot": 0, "in": 0.19, "out": 0.445}, {"text": "할까말까", "box": [716.5, 604.3, 877.1, 667.7], "rot": 0, "in": 0.235, "out": 0.435}, {"text": "할까말까", "box": [716.5, 690.5, 877.1, 753.9], "rot": 0, "in": 0.28, "out": 0.425}, {"text": "걱정", "box": [221.3, 629.2, 422.4, 790.2], "rot": 0, "in": 0.33, "out": 0.455}, {"text": "음...", "box": [18.2, 961.4, 163.7, 1054.3], "rot": 0, "in": 0.375, "out": 0.47}]
 RING = {'thought': [4], 'courage': [0, 4]}  # pieces that are ㅇ rings (outer + counter)
 ROTATED = {('courage', 'C85', 0), ('courage', 'C92', 0)}  # 용 top ring is drawn tilted in these scenes
 
@@ -212,7 +214,7 @@ def main():
         sc['num']['R'] = [lab, round(rel[0], 4), round(rel[1], 4), 30, NUM_R_SHOW[n], 1 if anchor == 'top' else 0]
         scenes.append(sc)
     data = {'W': W, 'H': H, 'rings': rings, 'steps': steps, 'ringPieces': RING,
-            'phrases': {k: [v[0], v[1]] for k, v in PHRASES.items()}, 'scenes': scenes}
+            'phrases': {k: [v[0], v[1]] for k, v in PHRASES.items()}, 'words': WORDS, 'scenes': scenes}
     s = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
     open(OUT, 'w', encoding='utf-8').write(s)
     print('saved', OUT, f'{len(s) / 1024:.0f} KB')

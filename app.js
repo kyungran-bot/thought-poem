@@ -97,6 +97,29 @@ function placePhrase(p, box, op) {
     p.e.setAttribute('font-size', size.toFixed(2)); p.e.setAttribute('letter-spacing', ls.toFixed(2));
     p.e.setAttribute('x', (x0 + p.m.l * k).toFixed(1)); p.e.setAttribute('y', (y0 + p.m.a * k).toFixed(1)); p.e.setAttribute('opacity', op.toFixed(3));
 }
+// ---------- outlined words that pop in one by one (no fade) ----------
+const words = [];
+function buildWords() {
+    for (const w of D.words) {
+        const e = document.createElementNS(NS, 'text'); e.textContent = w.text; e.setAttribute('font-family', 'Pear'); e.style.display = 'none';
+        $('words').append(e);
+        const p = { e, m: ink(w.text, 'Pear'), n: [...w.text].length };
+        placePhrase(p, w.box, 1); e.removeAttribute('opacity');
+        const [x0, y0, x1, y1] = w.box; words.push({ ...w, e, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, k: 0 });
+    }
+}
+// pop: 0 -> slightly too big -> settle, about a third of a second; leaving is a quick shrink
+const pop = k => k <= 0 ? 0 : k >= 1 ? 1 : 1 + 2.70158 * Math.pow(k - 1, 3) + 1.70158 * Math.pow(k - 1, 2); // ease-out-back
+function updateWords(v, dt) {
+    for (const w of words) {
+        const on = active && v >= w.in && v < w.out;
+        w.k = clamp(w.k + (on ? dt / .32 : -dt / .14));
+        if (w.k <= 0) { w.e.style.display = 'none'; continue; }
+        const sc = on ? pop(w.k) : w.k, rot = w.rot ? ` rotate(${w.rot} ${w.cx} ${w.cy})` : '';
+        w.e.style.display = '';
+        w.e.setAttribute('transform', `translate(${w.cx} ${w.cy}) scale(${sc.toFixed(4)}) translate(${-w.cx} ${-w.cy})${rot}`);
+    }
+}
 const nums = {};
 function buildNumbers() {
     for (const [key, parent] of [['L', 'labels'], ['Rtop', 'labels'], ['Rbot', 'labels']]) {
@@ -172,7 +195,7 @@ function tick(time) {
         // (no pointer-depth nudge: it fed back through the moving line and made the rings tremble)
         offset = 0;
         shown = mix(shown, active ? 1 : 0, 1 - Math.exp(-dt * 3)); if (Math.abs(shown - (active ? 1 : 0)) < .001) shown = active ? 1 : 0;
-        draw(clamp(s + offset * (1 - Math.abs(s)), -1, 1)); drawCompass(dt);
+        const v = clamp(s + offset * (1 - Math.abs(s)), -1, 1); draw(v); drawCompass(dt); updateWords(v, dt);
     }
     requestAnimationFrame(tick);
 }
@@ -194,6 +217,6 @@ document.addEventListener('visibilitychange', () => { inside = false; $('cursorD
 Promise.all([fetch('assets/scenes.json').then(r => { if (!r.ok) throw Error('scenes'); return r.json(); }),
              document.fonts.load('100px Pear', '이 많아지면'), document.fonts.load('100px Neurimbo', '0123456789')]).then(([data]) => {
     D = data; W = D.W; H = D.H;
-    buildGlyph('thought', $('thought')); buildGlyph('courage', $('bravery')); buildPhrases(); buildNumbers(); draw(0);
+    buildGlyph('thought', $('thought')); buildGlyph('courage', $('bravery')); buildPhrases(); buildNumbers(); buildWords(); draw(0);
 }).catch(() => { const h = $('help'); h.hidden = false; h.textContent = '파일을 불러오지 못했어요. 새로고침해 주세요.'; });
 requestAnimationFrame(tick);
