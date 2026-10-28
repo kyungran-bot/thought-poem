@@ -4,9 +4,21 @@
 
 파일
 - index.html: 화면 구조·스타일·커서 크기
-- app.js: 호버, 영역 비율, SVG 변형, 숫자 위치
+- app.js: 호버, 영역 비율, 글자 변형, 숫자 위치
 - typography.js: 문구와 글자 배치 데이터
-- assets/: 첨부한 폰트, SVG, 변형 데이터 및 기존 이미지 자료
+- assets/glyphs/: 생각·용기 글자 키프레임 SVG (생각_00.svg, 용기_00.svg …)
+- assets/glyphs.json: 키프레임을 변형용으로 변환한 데이터 (직접 고치지 말고 아래 변환기로 생성)
+- tools/build_glyphs.py: 키프레임 SVG → glyphs.json 변환기
+- assets/: 폰트와 기존 이미지 자료
+
+글자 키프레임 추가
+1. 일러스트레이터에서 단계별 글자를 '윤곽선 만들기' 한 뒤 SVG로 내보내 assets/glyphs/ 에 넣습니다.
+   같은 글자의 키프레임끼리 조각 수(구멍 수 포함)만 같으면 됩니다. 앵커 포인트 개수는 맞출 필요 없습니다.
+2. tools/build_glyphs.py 맨 위 GLYPHS 목록에 파일을 순서대로 적습니다.
+3. python3 tools/build_glyphs.py 를 실행하면 assets/glyphs.json 이 다시 만들어집니다.
+
+기준 화면: 첫 화면 그림(1526×848 px). 이 크기의 창에서 첫 화면이 그림과 픽셀 단위로 일치합니다.
+※ assets/glyphs/생각_00.svg 는 그림에서 따낸 임시 모양입니다. 윤곽선 만든 원본이 오면 교체하세요.
 
 실행
 1. ZIP을 압축 해제합니다.
