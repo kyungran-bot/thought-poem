@@ -145,8 +145,8 @@ function draw(v) {
     const vis = handover(a.num.R[4], b.num.R[4], t), top = handover(a.num.R[5], b.num.R[5], t), bot = handover(1 - a.num.R[5], 1 - b.num.R[5], t);
     placeNumber(nums.Rtop, label, cb.Rtop, rt[0], rt[1], R[3], shown * vis * top);
     placeNumber(nums.Rbot, label, cb.Rbot, rb[0], rb[1], R[3], shown * vis * bot);
-    // compass: half white / half black disc in the middle of the visible line, until one side passes 60
-    const lead = Math.max(L[0], 100 - L[0]); compassOp = clamp((60 - lead) / 4);
+    // compass: half white / half black disc in the middle of the line, shown only before the first click
+    compassOp = active ? 0 : 1; // only on the first screen, gone the moment the piece starts (no fade)
     const hits = []; const c = Math.cos(th), sn = Math.sin(th);
     for (const x of [0, W]) { const y = (lt - x * c) / sn; if (y >= 0 && y <= H) hits.push([x, y]); }
     for (const y of [0, H]) { const x = (lt - y * sn) / c; if (x >= 0 && x <= W) hits.push([x, y]); }
@@ -184,7 +184,7 @@ function move(e) {
 }
 $('art').addEventListener('pointermove', move);
 $('art').addEventListener('pointerleave', () => { inside = false; $('cursorDot').style.opacity = 0; });
-function start() { active = true; inside = true; $('start').hidden = true; }
+function start() { active = true; inside = true; $('start').hidden = true; $('compass').setAttribute('opacity', 0); compassOp = 0; }
 function reset() { active = false; s = 0; offset = 0; $('start').hidden = false; }
 $('start').addEventListener('pointerdown', e => { move(e); start(); });
 $('start').addEventListener('click', () => { if (!active) start(); });
