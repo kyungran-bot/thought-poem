@@ -87,15 +87,21 @@ const phrases = {};
 function buildPhrases() {
     for (const [key, [str, colour]] of Object.entries(D.phrases)) {
         const e = document.createElementNS(NS, 'text'); e.textContent = str; e.setAttribute('font-family', 'Pear'); e.setAttribute('opacity', 0);
-        $('labels').append(e); // white + difference blend: always the opposite colour of whatever is underneath
+        (colour === 'white' ? $('blackText') : $('whiteText')).append(e); // Pear phrases keep their own colour (no inversion)
         phrases[key] = { e, m: ink(str, 'Pear'), n: [...str].length };
     }
 }
-function placePhrase(p, box, op) {
-    const [x0, y0, x1, y1] = box, k = (y1 - y0) / (p.m.a + p.m.d), size = 100 * k;
-    const ls = p.n > 1 ? ((x1 - x0) - (p.m.l + p.m.r) * k) / (p.n - 1) : 0;
+// Pear text: size from the screenshot's ink height, natural letter shapes with slightly open tracking (no squeezing).
+// Phrases that hug something on their right (를 잃는 법 → 용기, 를 가진다고, 있게 저지르셨군요!) keep their right edge.
+const TRACK = .04; // extra space between letters, in em
+const RIGHT_ANCHORED = new Set(['suffix', 'have', 'bold1', 'bold2']);
+function placePhrase(p, box, op, right = false) {
+    const [x0, y0, x1, y1] = box, perK = (p.m.l + p.m.r) + TRACK * 100 * (p.n - 1); // width per unit of k
+    // as tall as the design, unless the opened spacing would overrun the designed width: then a touch smaller
+    const k = Math.min((y1 - y0) / (p.m.a + p.m.d), (x1 - x0) * 1.03 / perK), size = 100 * k, ls = TRACK * size;
+    const width = perK * k, left = right ? x1 - width : x0;
     p.e.setAttribute('font-size', size.toFixed(2)); p.e.setAttribute('letter-spacing', ls.toFixed(2));
-    p.e.setAttribute('x', (x0 + p.m.l * k).toFixed(1)); p.e.setAttribute('y', (y0 + p.m.a * k).toFixed(1)); p.e.setAttribute('opacity', op.toFixed(3));
+    p.e.setAttribute('x', (left + p.m.l * k).toFixed(1)); p.e.setAttribute('y', (y0 + p.m.a * k).toFixed(1)); p.e.setAttribute('opacity', op.toFixed(3));
 }
 // ---------- outlined words that pop in one by one (no fade) ----------
 const words = [];
@@ -159,7 +165,7 @@ function draw(v) {
     const tb = setGlyph('thought', step, a.thought, b.thought, t), cb = setGlyph('courage', step, a.courage, b.courage, t);
     for (const k in phrases) {
         const A = a.text[k], B = b.text[k];
-        placePhrase(phrases[k], [0, 1, 2, 3].map(i => mix(A[i], B[i], t)), handover(A[4], B[4], t));
+        placePhrase(phrases[k], [0, 1, 2, 3].map(i => mix(A[i], B[i], t)), handover(A[4], B[4], t), RIGHT_ANCHORED.has(k));
     }
     const L = [0, 1, 2, 3, 4].map(i => mix(a.num.L[i], b.num.L[i], t));
     placeNumber(nums.L, Math.round(L[0]), tb.L, L[1], L[2], L[3], shown * handover(a.num.L[4], b.num.L[4], t));
