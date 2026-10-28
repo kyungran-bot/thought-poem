@@ -48,12 +48,12 @@ PHRASES = {
 # numbers: label, centre and digit height as measured; None = not visible in that screenshot
 NUM_L = {'A50': (50, None, 30), 'T52': (52, (275, 507.5), 30), 'T55': (55, (335, 655), 30), 'T65': (65, (327.95, 735.95), 30),
          'T90a': (90, (379.25, 718.45), 30), 'T90b': (90, (376.75, 718.45), 30), 'T100': (100, (379.2, 718.45), 30),
-         'C70': (30, (210, 410), 30), 'C85': (15, (94, 198.05), 30), 'C92': (15, (73.85, 141.45), 22.5), 'C100': (15, None, 22.5)}
+         'C70': (30, (210, 410), 30), 'C85': (15, (94, 198.05), 30), 'C92': (8, (73.85, 141.45), 22.5), 'C100': (0, None, 22.5)}
 NUM_R = {'A50': (50, 'top', None), 'T52': (48, 'top', (1341.25, 525)), 'T55': (45, 'top', (1187.5, 567.5)), 'T65': (35, 'top', (1340.5, 665.85)),
          'T90a': (10, 'top', (1653, 878)), 'T90b': (5, 'top', None), 'T100': (0, 'top', None),
          'C70': (70, 'bot', (787.5, 1020)), 'C85': (85, 'bot', (582.75, 1010.15)), 'C92': (92, 'bot', (458.1, 983.8)), 'C100': (100, 'bot', (427.35, 862.25))}
 NUM_R_SHOW = {'A50': 1, 'T52': 1, 'T55': 1, 'T65': 1, 'T90a': 1, 'T90b': 0, 'T100': 0, 'C70': 1, 'C85': 1, 'C92': 1, 'C100': 1}
-NUM_L_SHOW = {n: 1 for n in ORDER}
+NUM_L_SHOW = {n: 0 if n == 'C100' else 1 for n in ORDER}  # 생각 is gone at 용기 100
 
 
 # steps where a morph would poke a spike into the picture: the old shape slides out and fades, the new one fades in
