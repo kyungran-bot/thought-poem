@@ -123,7 +123,8 @@ function updateWords(v, dt) {
         const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
         w.e.setAttribute('transform', w.rot ? `rotate(${w.rot} ${cx} ${cy})` : '');
     }
-    torch = mix(torch, active && inside ? 1 : 0, 1 - Math.exp(-dt * 6));
+    // the torch works only once 생각 has reached 65 (the 65 scene sits at v = 0.5)
+    torch = mix(torch, active && inside && v >= 0.5 ? 1 : 0, 1 - Math.exp(-dt * 6));
     const spot = $('torchSpot'), r = $('art').getBoundingClientRect(), k = (r.width / W) / (r.height / H);
     spot.setAttribute('cx', px.toFixed(1)); spot.setAttribute('cy', py.toFixed(1));
     spot.setAttribute('rx', (170 / Math.sqrt(k)).toFixed(1)); spot.setAttribute('ry', (170 * Math.sqrt(k)).toFixed(1));
