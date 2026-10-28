@@ -57,7 +57,9 @@ NUM_L_SHOW = {n: 1 for n in ORDER}
 
 
 # steps where a morph would poke a spike into the picture: the old shape slides out and fades, the new one fades in
-SLIDE = {('T90a', 'T90b', 'thought', 5)}
+SLIDE = set()
+# steps where shapes should pair by where they are on screen (the long band retracts into the short leg)
+NEAR = {('T90a', 'T90b', 'thought', 5)}
 RING = {'thought': [4], 'courage': [0, 4]}  # pieces that are ㅇ rings (outer + counter)
 ROTATED = {('courage', 'C85', 0), ('courage', 'C92', 0)}  # 용 top ring is drawn tilted in these scenes
 
@@ -90,11 +92,12 @@ def corners_only(p):
     return p
 
 
-def match_polygons(A, Bp, lam=0.08):
+def match_polygons(A, Bp, lam=0.08, absolute=False):
     """Corner correspondence between two closed polygons (same winding). Returns equal-length vertex lists:
     corners are paired with corners where the shapes agree, otherwise a corner is paired with a point on the
     other polygon's edge, so every in-between shape is again a polygon with straight edges."""
     def norm(P):
+        if absolute: return P / 1000.0
         lo, hi = P.min(0), P.max(0); return (P - lo) / np.maximum(hi - lo, 1e-6)
     def proj(p, a, b):
         d = b - a; L = d @ d
@@ -186,7 +189,7 @@ def main():
             pieces = []
             for i in range(len(fa)):
                 if i in RING[g]: pieces.append(None); continue
-                A2, B2 = match_polygons(fa[i], fb[i]); pieces.append([ints(A2), ints(B2), 1 if (a, b, g, i) in SLIDE or awkward(A2, B2) else 0])
+                A2, B2 = match_polygons(fa[i], fb[i], absolute=(a, b, g, i) in NEAR); pieces.append([ints(A2), ints(B2), 1 if (a, b, g, i) in SLIDE or awkward(A2, B2) else 0])
             st[g] = pieces
         steps.append(st)
     counters = {}
