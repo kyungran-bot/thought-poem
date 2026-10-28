@@ -129,6 +129,16 @@ function updateWords(v, dt) {
     spot.setAttribute('cx', px.toFixed(1)); spot.setAttribute('cy', py.toFixed(1));
     spot.setAttribute('rx', (170 / Math.sqrt(k)).toFixed(1)); spot.setAttribute('ry', (170 * Math.sqrt(k)).toFixed(1));
     spot.setAttribute('opacity', torch.toFixed(3));
+    // keep the outlined words out from under the filled phrases so those always read cleanly
+    const holes = $('torchHoles'); let i = 0;
+    if (torch > .002) for (const k in phrases) {
+        const e = phrases[k].e; if (+e.getAttribute('opacity') < .05) continue;
+        const b = e.getBBox(), pad = .12 * b.height;
+        let r = holes.children[i]; if (!r) { r = document.createElementNS(NS, 'rect'); holes.append(r); }
+        r.setAttribute('x', (b.x - pad).toFixed(1)); r.setAttribute('y', (b.y - pad).toFixed(1));
+        r.setAttribute('width', (b.width + 2 * pad).toFixed(1)); r.setAttribute('height', (b.height + 2 * pad).toFixed(1)); i++;
+    }
+    while (holes.children.length > i) holes.lastChild.remove();
 }
 const nums = {};
 function buildNumbers() {
