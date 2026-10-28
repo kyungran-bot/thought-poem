@@ -56,6 +56,8 @@ NUM_R_SHOW = {'A50': 1, 'T52': 1, 'T55': 1, 'T65': 1, 'T90a': 1, 'T90b': 0, 'T10
 NUM_L_SHOW = {n: 1 for n in ORDER}
 
 
+# steps where a morph would poke a spike into the picture: the old shape slides out and fades, the new one fades in
+SLIDE = {('T90a', 'T90b', 'thought', 5)}
 RING = {'thought': [4], 'courage': [0, 4]}  # pieces that are ㅇ rings (outer + counter)
 ROTATED = {('courage', 'C85', 0), ('courage', 'C92', 0)}  # 용 top ring is drawn tilted in these scenes
 
@@ -139,6 +141,28 @@ def frame_of(glyph, scene):
     return out
 
 
+def _crosses(P):
+    n = len(P)
+    def seg(a, b, c, d):
+        o = lambda p, q, r: np.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]))
+        return o(a, b, c) * o(a, b, d) < 0 and o(c, d, a) * o(c, d, b) < 0
+    for i in range(n):
+        for j in range(i + 2, n):
+            if i == 0 and j == n - 1: continue
+            if seg(P[i], P[(i + 1) % n], P[j], P[(j + 1) % n]): return True
+    return False
+
+
+def awkward(A, Bp):
+    """True when the straight morph would fold or poke inward (self-crossing or a collapsing in-between area):
+    such pieces crossfade instead of morphing."""
+    for t in (.25, .5, .75):
+        M = A + (Bp - A) * t
+        if _crosses(M): return True
+        if abs(B.area(M)) < 0.75 * min(abs(B.area(A)), abs(B.area(Bp))): return True
+    return False
+
+
 def ints(p):
     return np.round(np.asarray(p) * 2).astype(int).ravel().tolist()  # half-unit integers
 
@@ -162,7 +186,7 @@ def main():
             pieces = []
             for i in range(len(fa)):
                 if i in RING[g]: pieces.append(None); continue
-                A2, B2 = match_polygons(fa[i], fb[i]); pieces.append([ints(A2), ints(B2)])
+                A2, B2 = match_polygons(fa[i], fb[i]); pieces.append([ints(A2), ints(B2), 1 if (a, b, g, i) in SLIDE or awkward(A2, B2) else 0])
             st[g] = pieces
         steps.append(st)
     counters = {}

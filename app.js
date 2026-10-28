@@ -29,7 +29,10 @@ function halfPlane(th, t, keep) { // polygon of the screen where keep(d) holds, 
 // straight edges. Rings (ㅇ): always true ellipses; only centre, radii and tilt move.
 const glyphEls = { thought: [], courage: [] };
 function buildGlyph(name, group) {
-    D.rings[name][0].forEach(() => { const e = document.createElementNS(NS, 'path'); e.setAttribute('fill-rule', 'evenodd'); group.append(e); glyphEls[name].push(e); });
+    D.rings[name][0].forEach(() => {
+        const mk = () => { const e = document.createElementNS(NS, 'path'); e.setAttribute('fill-rule', 'evenodd'); group.append(e); return e; };
+        const e = mk(); e.ghost = mk(); glyphEls[name].push(e);
+    });
 }
 const f1 = v => v.toFixed(1);
 // Ellipses are drawn as dense polygons: SVG half-arcs whose end points get rounded become ambiguous and make the
@@ -59,7 +62,15 @@ function setGlyph(name, step, fa, fb, t) {
             d = ellipsePath(o) + ellipsePath(c);
             if (COUNTER[name][i]) boxes[COUNTER[name][i]] = ellipseBox(c);
         } else {
-            const [A, B] = pc;
+            const [A, B, slide] = pc, el = glyphEls[name][i];
+            const poly = (P, dx, dy) => { let q = ''; for (let k = 0; k < P.length; k += 2) q += (k ? 'L' : 'M') + f1(P[k] * .5 + dx) + ' ' + f1(P[k + 1] * .5 + dy); return q + 'Z'; };
+            if (slide) { // old shape slides out toward the corner and fades, new shape fades in where it belongs
+                const u = clamp(t * 1.6);
+                el.setAttribute('d', poly(B, 0, 0)); el.setAttribute('opacity', clamp((t - .25) / .6).toFixed(3));
+                el.ghost.setAttribute('d', poly(A, 420 * u * u, 160 * u * u)); el.ghost.setAttribute('opacity', (1 - u).toFixed(3));
+                return;
+            }
+            el.setAttribute('opacity', 1); el.ghost.setAttribute('d', 'M0 0Z');
             for (let k = 0; k < A.length; k += 2) d += (k ? 'L' : 'M') + f1((A[k] + (B[k] - A[k]) * t) * .5) + ' ' + f1((A[k + 1] + (B[k + 1] - A[k + 1]) * t) * .5);
             d += 'Z';
         }
