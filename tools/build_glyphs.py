@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""글자 키프레임 SVG → assets/glyphs.json (글자 변형 데이터)
+"""SVG 읽기·외곽선 재분할 도우미 (tools/scenes/ 가 가져다 씀). 단독 실행용 예전 변환기는 더 이상 쓰지 않습니다.
+
+(예전 설명) 글자 키프레임 SVG → assets/glyphs.json (글자 변형 데이터)
 
 키프레임 SVG 규칙
   - 윤곽선 만들기(Create Outlines) 한 모양만. <text>(폰트 글자)는 안 됩니다.
@@ -22,8 +24,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 DESIGN = [1526, 848]  # 기준 화면(px) — 이 크기의 화면에서 그림과 픽셀 단위로 일치
 GLYPHS = {
-    'thought': {'files': ['assets/glyphs/생각_00.svg'], 'unit': 1.0, 'at': [38.0, 44.2], 'counter': 'top'},
-    'courage': {'files': ['assets/glyphs/용기_00.svg'], 'unit': 0.7944, 'at': [1004.4, 364.75], 'counter': 'top'},
+    'thought': {'files': ['assets/glyphs/생각0단계_트레이스.svg'], 'unit': 1.0, 'at': [38.0, 44.2], 'counter': 'top'},
+    'courage': {'files': ['assets/glyphs/용기0단계.svg'], 'unit': 0.7944, 'at': [1004.4, 364.75], 'counter': 'top'},
 }
 SPACING = 2.0     # 다시 나눌 때 점 간격(기준 화면 px)
 CORNER_DEG = 12   # 이 각도 이상 꺾이는 점은 모서리로 보고 정확히 보존
