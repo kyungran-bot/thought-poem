@@ -113,18 +113,18 @@ function buildWords() {
     }
 }
 // Words are always in place but hidden: a soft torch around the pointer reveals only what is near it (생각 side only).
-// They sit at their 59 places, glide to their 89 places as 생각 grows, and stay there.
-let torch = 0;
+// They stay fixed in their 89 places.
+let torch = 0, leftLabel = 50;
 function updateWords(v, dt) {
     const [s59, s89] = D.wordScenes, u = ease(clamp((v - s59) / (s89 - s59)));
     for (const w of words) {
-        const box = w.box ? w.box.map((x, i) => mix(x, w.box2[i], u)) : w.box2;
+        const box = w.box2; // fixed in their 89 places: they never move
         placePhrase(w.p, box, 1); w.e.removeAttribute('opacity'); w.e.style.display = '';
         const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
         w.e.setAttribute('transform', w.rot ? `rotate(${w.rot} ${cx} ${cy})` : '');
     }
-    // the torch works only once 생각 has reached 65 (the 65 scene sits at v = 0.5)
-    torch = mix(torch, active && inside && v >= 0.5 ? 1 : 0, 1 - Math.exp(-dt * 6));
+    // the torch works only once 생각 shows 70 or more
+    torch = mix(torch, active && inside && v > 0 && leftLabel >= 70 ? 1 : 0, 1 - Math.exp(-dt * 6));
     const spot = $('torchSpot'), r = $('art').getBoundingClientRect(), k = (r.width / W) / (r.height / H);
     spot.setAttribute('cx', px.toFixed(1)); spot.setAttribute('cy', py.toFixed(1));
     spot.setAttribute('rx', (170 / Math.sqrt(k)).toFixed(1)); spot.setAttribute('ry', (170 * Math.sqrt(k)).toFixed(1));
@@ -169,6 +169,7 @@ function draw(v) {
         placePhrase(phrases[k], [0, 1, 2, 3].map(i => mix(A[i], B[i], t)), handover(A[4], B[4], t), RIGHT_ANCHORED.has(k));
     }
     const L = [0, 1, 2, 3, 4].map(i => mix(a.num.L[i], b.num.L[i], t));
+    leftLabel = Math.round(L[0]);
     placeNumber(nums.L, Math.round(L[0]), tb.L, L[1], L[2], L[3], shown * handover(a.num.L[4], b.num.L[4], t));
     const R = [0, 1, 2, 3, 4, 5].map(i => mix(a.num.R[i], b.num.R[i], t)), label = Math.round(R[0]);
     // the 용기 number sits in the top ㅇ on the 생각 side and in the bottom ㅇ on the 용기 side; it crossfades between them
