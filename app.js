@@ -4,10 +4,10 @@
 // the dividing line, the letter shapes (corner-to-corner, rings stay ellipses), the phrases, the numbers and the gutters.
 const $ = id => document.getElementById(id), NS = 'http://www.w3.org/2000/svg';
 const mix = (a, b, t) => a + (b - a) * t, clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
-const ease = t => t * t * (3 - 2 * t); // each designed scene is a gentle resting point
+const ease = t => mix(t, t * t * (3 - 2 * t), .3); // mostly even speed, a slight rest at each designed scene
 // something that leaves fades out in the first half of a step, something that arrives fades in during the second half
 const handover = (a, b, t) => a === b ? a : a > b ? mix(b, a, clamp(1 - 2 * t)) : mix(a, b, clamp(2 * t - 1));
-const RATE_THOUGHT = 1 / 8, RATE_COURAGE = 1 / 10; // progress per second while the pointer stays on that side
+const RATE_THOUGHT = 1 / 16, RATE_COURAGE = 1 / 10; // progress per second while the pointer stays on that side
 let D = null, W = 1920, H = 1077;
 let active = false, inside = false, s = 0, offset = 0, shown = 0, px = 960, py = 540, last = 0, lastKey = '';
 let line = { c: Math.cos(1), sn: Math.sin(1), t: 0 };
@@ -133,8 +133,8 @@ function tick(time) {
     if (D) {
         const d = dist(px, py);
         if (active && inside) s = clamp(s + (d < 0 ? RATE_THOUGHT : -RATE_COURAGE) * dt, -1, 1);
-        // the deeper the pointer sits in one side, the more the scene leans toward that side
-        offset = mix(offset, active && inside ? clamp(-d / H * .4, -.12, .12) : 0, 1 - Math.exp(-dt * 4));
+        // (no pointer-depth nudge: it fed back through the moving line and made the rings tremble)
+        offset = 0;
         shown = mix(shown, active ? 1 : 0, 1 - Math.exp(-dt * 3)); if (Math.abs(shown - (active ? 1 : 0)) < .001) shown = active ? 1 : 0;
         draw(clamp(s + offset * (1 - Math.abs(s)), -1, 1));
     }
