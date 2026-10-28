@@ -106,21 +106,22 @@ function buildWords() {
         words.push({ ...w, e, p: { e, m: ink(w.text, 'Pear'), n: [...w.text].length }, k: 0 });
     }
 }
-// appear: 94 % -> 100 % in about 0.2 s, no fade; leaving is a quick shrink
-const pop = k => k <= 0 ? 0 : k >= 1 ? 1 : .94 + .06 * (1 + 1.4 * Math.pow(k - 1, 3) + .4 * Math.pow(k - 1, 2));
-// words land at the 59 scene, glide gently to their 89 places, and stay; extra 할까말까 appear where they stay
+// Words are always in place but hidden: a soft torch around the pointer reveals only what is near it (생각 side only).
+// They sit at their 59 places, glide to their 89 places as 생각 grows, and stay there.
+let torch = 0;
 function updateWords(v, dt) {
     const [s59, s89] = D.wordScenes, u = ease(clamp((v - s59) / (s89 - s59)));
     for (const w of words) {
-        const on = active && v >= w.in;
-        w.k = clamp(w.k + (on ? dt / .22 : -dt / .12));
-        if (w.k <= 0) { w.e.style.display = 'none'; continue; }
         const box = w.box ? w.box.map((x, i) => mix(x, w.box2[i], u)) : w.box2;
-        placePhrase(w.p, box, 1); w.e.removeAttribute('opacity');
-        const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2, sc = on ? pop(w.k) : .94 + .06 * w.k;
-        w.e.style.display = '';
-        w.e.setAttribute('transform', `translate(${cx} ${cy}) scale(${sc.toFixed(4)}) translate(${-cx} ${-cy})` + (w.rot ? ` rotate(${w.rot} ${cx} ${cy})` : ''));
+        placePhrase(w.p, box, 1); w.e.removeAttribute('opacity'); w.e.style.display = '';
+        const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
+        w.e.setAttribute('transform', w.rot ? `rotate(${w.rot} ${cx} ${cy})` : '');
     }
+    torch = mix(torch, active && inside ? 1 : 0, 1 - Math.exp(-dt * 6));
+    const spot = $('torchSpot'), r = $('art').getBoundingClientRect(), k = (r.width / W) / (r.height / H);
+    spot.setAttribute('cx', px.toFixed(1)); spot.setAttribute('cy', py.toFixed(1));
+    spot.setAttribute('rx', (170 / Math.sqrt(k)).toFixed(1)); spot.setAttribute('ry', (170 * Math.sqrt(k)).toFixed(1));
+    spot.setAttribute('opacity', torch.toFixed(3));
 }
 const nums = {};
 function buildNumbers() {
