@@ -1,7 +1,7 @@
 'use strict';
 // 생각이 많아지면 — scenes measured from the design screenshots (assets/scenes.json, built by tools/build_scenes.py).
 // s runs from -1 (용기 100) through 0 (first screen, 50:50) to +1 (생각 100). Everything between two scenes is interpolated:
-// the dividing line, the letter shapes (point-by-point morph), the phrases, the numbers and the gutters along the line.
+// the dividing line, the letter shapes (corner-to-corner, rings stay ellipses), the phrases, the numbers and the gutters.
 const $ = id => document.getElementById(id), NS = 'http://www.w3.org/2000/svg';
 const mix = (a, b, t) => a + (b - a) * t, clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const ease = t => t * t * (3 - 2 * t); // each designed scene is a gentle resting point
@@ -25,26 +25,37 @@ function halfPlane(th, t, keep) { // polygon of the screen where keep(d) holds, 
 }
 
 // ---------- letters ----------
+// Straight pieces: corner lists matched step by step (tools/scenes/build_scenes.py), so every in-between shape keeps
+// straight edges. Rings (ㅇ): always true ellipses; only centre, radii and tilt move.
 const glyphEls = { thought: [], courage: [] };
 function buildGlyph(name, group) {
-    D[name][0].forEach(() => { const e = document.createElementNS(NS, 'path'); e.setAttribute('fill-rule', 'evenodd'); group.append(e); glyphEls[name].push(e); });
+    D.rings[name][0].forEach(() => { const e = document.createElementNS(NS, 'path'); e.setAttribute('fill-rule', 'evenodd'); group.append(e); glyphEls[name].push(e); });
 }
-// Draws the morph between frames fa and fb; returns the boxes [cx, cy, w, h] of the requested counters (ㅇ holes).
-function setGlyph(name, fa, fb, t, wanted) {
-    const A = D[name][fa], B = D[name][fb], boxes = {};
-    A.forEach((piece, pi) => {
+const f1 = v => v.toFixed(1);
+function ellipsePath([cx, cy, rx, ry, a]) {
+    const r = a * Math.PI / 180, ux = Math.cos(r) * rx, uy = Math.sin(r) * rx;
+    return `M${f1(cx + ux)} ${f1(cy + uy)}A${f1(rx)} ${f1(ry)} ${a.toFixed(2)} 1 1 ${f1(cx - ux)} ${f1(cy - uy)}A${f1(rx)} ${f1(ry)} ${a.toFixed(2)} 1 1 ${f1(cx + ux)} ${f1(cy + uy)}Z`;
+}
+function ellipseBox([cx, cy, rx, ry, a]) {
+    const r = a * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+    return [cx, cy, 2 * Math.hypot(rx * c, ry * sn), 2 * Math.hypot(rx * sn, ry * c)];
+}
+const COUNTER = { thought: { 4: 'L' }, courage: { 0: 'Rtop', 4: 'Rbot' } };
+// Draws glyph `name` for step `step` (between scenes a and b) at t; returns the counter boxes [cx, cy, w, h].
+function setGlyph(name, step, fa, fb, t) {
+    const pieces = D.steps[step][name], ra = D.rings[name][fa], rb = D.rings[name][fb], boxes = {};
+    pieces.forEach((pc, i) => {
         let d = '';
-        piece.forEach((a, si) => {
-            const b = B[pi][si], key = pi + ':' + si, want = wanted[key];
-            let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-            for (let k = 0; k < a.length; k += 2) {
-                const x = (a[k] + (b[k] - a[k]) * t) * .5, y = (a[k + 1] + (b[k + 1] - a[k + 1]) * t) * .5;
-                d += (k ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
-                if (want) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-            }
-            d += 'Z'; if (want) boxes[want] = [(x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0];
-        });
-        glyphEls[name][pi].setAttribute('d', d);
+        if (pc === null) {
+            const o = ra[i].o.map((v, k) => mix(v, rb[i].o[k], t)), c = ra[i].i.map((v, k) => mix(v, rb[i].i[k], t));
+            d = ellipsePath(o) + ellipsePath(c);
+            if (COUNTER[name][i]) boxes[COUNTER[name][i]] = ellipseBox(c);
+        } else {
+            const [A, B] = pc;
+            for (let k = 0; k < A.length; k += 2) d += (k ? 'L' : 'M') + f1((A[k] + (B[k] - A[k]) * t) * .5) + ' ' + f1((A[k + 1] + (B[k + 1] - A[k + 1]) * t) * .5);
+            d += 'Z';
+        }
+        glyphEls[name][i].setAttribute('d', d);
     });
     return boxes;
 }
@@ -83,14 +94,14 @@ function placeNumber(e, label, counter, rx, ry, h, op) {
 }
 
 // ---------- one frame ----------
-function pair(v) {
-    const sc = D.scenes;
-    if (v <= sc[0].s) return [sc[0], sc[0], 0];
-    for (let i = 0; i < sc.length - 1; i++) if (v <= sc[i + 1].s) return [sc[i], sc[i + 1], ease((v - sc[i].s) / (sc[i + 1].s - sc[i].s))];
-    const z = sc[sc.length - 1]; return [z, z, 0];
+function pair(v) { // -> [scene a, scene b, eased t, step index]
+    const sc = D.scenes, n = sc.length;
+    if (v <= sc[0].s) return [sc[0], sc[1], 0, 0];
+    for (let i = 0; i < n - 1; i++) if (v <= sc[i + 1].s) return [sc[i], sc[i + 1], ease((v - sc[i].s) / (sc[i + 1].s - sc[i].s)), i];
+    return [sc[n - 2], sc[n - 1], 1, n - 2];
 }
 function draw(v) {
-    const [a, b, t] = pair(v), key = a.id + b.id + t.toFixed(4) + shown.toFixed(3);
+    const [a, b, t, step] = pair(v), key = a.id + b.id + t.toFixed(4) + shown.toFixed(3);
     if (key === lastKey) return; lastKey = key;
     const th = mix(a.line[0], b.line[0], t) * Math.PI / 180, lt = mix(a.line[1], b.line[1], t);
     line = { c: Math.cos(th), sn: Math.sin(th), t: lt };
@@ -99,8 +110,7 @@ function draw(v) {
     $('whitePath').setAttribute('d', halfPlane(th, lt, d => d >= 0));
     $('thoughtPath').setAttribute('d', halfPlane(th, lt - gapT, d => d < 0));
     $('couragePath').setAttribute('d', halfPlane(th, lt + gapC, d => d > 0));
-    const ct = D.counters, tb = setGlyph('thought', a.thought, b.thought, t, { [ct.thought.join(':')]: 'L' });
-    const cb = setGlyph('courage', a.courage, b.courage, t, { [ct.courageTop.join(':')]: 'Rtop', [ct.courageBottom.join(':')]: 'Rbot' });
+    const tb = setGlyph('thought', step, a.thought, b.thought, t), cb = setGlyph('courage', step, a.courage, b.courage, t);
     for (const k in phrases) {
         const A = a.text[k], B = b.text[k];
         placePhrase(phrases[k], [0, 1, 2, 3].map(i => mix(A[i], B[i], t)), handover(A[4], B[4], t));

@@ -17,7 +17,6 @@ LINES = json.load(open('lines.json'))
 LINES['A50'] = [math.degrees(math.atan2(1920, 1077)), 1920 * 1077 / math.hypot(1920, 1077)]  # corner to corner
 LINES['T100'] = [75.89, 1560.0]   # beyond the bottom-right corner: all black
 LINES['C100'] = [76.0, -40.0]     # beyond the top-left corner: all white
-COUNTERS = json.load(open('counters.json'))
 
 ORDER = ['C100', 'C92', 'C85', 'C70', 'A50', 'T52', 'T55', 'T65', 'T90a', 'T90b', 'T100']
 S = {'C100': -1, 'C92': -.75, 'C85': -.5, 'C70': -.25, 'A50': 0,
@@ -57,59 +56,139 @@ NUM_R_SHOW = {'A50': 1, 'T52': 1, 'T55': 1, 'T65': 1, 'T90a': 1, 'T90b': 0, 'T10
 NUM_L_SHOW = {n: 1 for n in ORDER}
 
 
-def resample_glyph(frames, parent_of, names):
-    """frames: name -> pieces. Returns name -> pieces resampled to common point counts, start points aligned."""
-    out = {n: [[None] * len(pc) for pc in frames[n]] for n in names}
-    base = names[0]
-    for pi, pc in enumerate(frames[base]):
-        for si in range(len(pc)):
-            subs = {n: B.clean(frames[n][pi][si]) for n in names}
-            per = max(B.perimeter(s) for s in subs.values())
-            nc = max(len(B.corners(s)) for s in subs.values())
-            N = int(min(1400, max(48, 3 * nc, math.ceil(per / 4.0))))
-            done = {}
-            for n in names:  # names are ordered so parents come first
-                r = B.resample(subs[n], N)
-                if n in parent_of: r = B.best_roll(done[parent_of[n]], r)
-                done[n] = r; out[n][pi][si] = r
+RING = {'thought': [4], 'courage': [0, 4]}  # pieces that are ㅇ rings (outer + counter)
+ROTATED = {('courage', 'C85', 0), ('courage', 'C92', 0)}  # 용 top ring is drawn tilted in these scenes
+
+
+def ellipse_params(points, rotated=False):
+    """[cx, cy, rx, ry, angle_deg] with the angle kept in (-45, 45] so neighbouring scenes never spin."""
+    import cv2
+    from geo import _axis_fit
+    p = np.asarray(points, float)
+    (cx, cy), (w, h), a = cv2.fitEllipseDirect(p.astype(np.float32).reshape(-1, 1, 2)) if rotated else _axis_fit(p)
+    rx, ry = w / 2, h / 2
+    while a > 45: a -= 90; rx, ry = ry, rx
+    while a <= -45: a += 90; rx, ry = ry, rx
+    return [round(float(v), 2) for v in (cx, cy, rx, ry, a)]
+
+
+def corners_only(p):
+    """Keep only real corners of a straight-edged piece (drop duplicates and points on straight runs)."""
+    p = B.clean(p)
+    changed = True
+    while changed and len(p) > 3:
+        changed = False
+        for i in range(len(p)):
+            a, b, c = p[i - 1], p[i], p[(i + 1) % len(p)]
+            e1, e2 = b - a, c - b
+            l1, l2 = np.linalg.norm(e1), np.linalg.norm(e2)
+            ang = 0 if l1 < .3 or l2 < .3 else np.degrees(abs(np.arctan2(e1[0] * e2[1] - e1[1] * e2[0], e1 @ e2)))
+            if l1 < .3 or ang < 1.0:
+                p = np.delete(p, i, 0); changed = True; break
+    return p
+
+
+def match_polygons(A, Bp, lam=0.08):
+    """Corner correspondence between two closed polygons (same winding). Returns equal-length vertex lists:
+    corners are paired with corners where the shapes agree, otherwise a corner is paired with a point on the
+    other polygon's edge, so every in-between shape is again a polygon with straight edges."""
+    def norm(P):
+        lo, hi = P.min(0), P.max(0); return (P - lo) / np.maximum(hi - lo, 1e-6)
+    def proj(p, a, b):
+        d = b - a; L = d @ d
+        u = 0.0 if L < 1e-12 else float(np.clip((p - a) @ d / L, 0, 1)); return u, np.linalg.norm(p - (a + u * d))
+    n, m = len(A), len(Bp); An = norm(A); best = None
+    for s in range(m):
+        Bs = np.roll(Bp, -s, 0); Bn = np.roll(norm(Bp), -s, 0)
+        INF = 1e18; D = np.full((n + 1, m + 1), INF); D[0, 0] = np.linalg.norm(An[0] - Bn[0]); back = {}
+        for i in range(n + 1):
+            for j in range(m + 1):
+                if D[i, j] >= INF: continue
+                if i < n and j < m and (i + 1 < n) == (j + 1 < m) or (i + 1 == n and j + 1 == m):
+                    if i < n and j < m:
+                        c = D[i, j] + np.linalg.norm(An[(i + 1) % n] - Bn[(j + 1) % m])
+                        if c < D[i + 1, j + 1]: D[i + 1, j + 1] = c; back[(i + 1, j + 1)] = (i, j, 'M', 0)
+                if i + 1 < n and j < m:  # A corner lands on B's edge j -> j+1
+                    u, dd = proj(An[i + 1], Bn[j % m], Bn[(j + 1) % m]); c = D[i, j] + dd + lam
+                    if c < D[i + 1, j]: D[i + 1, j] = c; back[(i + 1, j)] = (i, j, 'A', u)
+                if j + 1 < m and i < n:  # B corner lands on A's edge i -> i+1
+                    u, dd = proj(Bn[j + 1], An[i % n], An[(i + 1) % n]); c = D[i, j] + dd + lam
+                    if c < D[i, j + 1]: D[i, j + 1] = c; back[(i, j + 1)] = (i, j, 'B', u)
+        if best is None or D[n, m] < best[0]: best = (D[n, m], s, back)
+    _, s, back = best; Bs = np.roll(Bp, -s, 0)
+    pairs = []; i, j = n, m
+    while (i, j) != (0, 0):
+        pi, pj, kind, u = back[(i, j)]
+        if kind == 'M': pairs.append((A[i % n], Bs[j % m]))
+        elif kind == 'A': pairs.append((A[i % n], Bs[pj % m] + u * (Bs[(pj + 1) % m] - Bs[pj % m])))
+        else: pairs.append((A[pi % n] + u * (A[(pi + 1) % n] - A[pi % n]), Bs[j % m]))
+        i, j = pi, pj
+    pairs.reverse()  # the last pair is (A0, B0) again: it closes the loop
+    return np.array([p[0] for p in pairs]), np.array([p[1] for p in pairs])
+
+
+def frame_of(glyph, scene):
+    """Pieces of one scene: straight pieces as corner lists, rings as two ellipses."""
+    out = []
+    for i, pc in enumerate(placed(glyph, scene)):
+        if i in RING[glyph]:
+            rot = (glyph, scene, i) in ROTATED
+            out.append({'o': ellipse_params(pc[0], rot), 'i': ellipse_params(pc[1], rot)})
+        else:
+            out.append(corners_only(pc[0]))
     return out
 
 
-def flat(pieces):
-    return [[np.round(s * 2).astype(int).ravel().tolist() for s in pc] for pc in pieces]  # half-unit integers
+def ints(p):
+    return np.round(np.asarray(p) * 2).astype(int).ravel().tolist()  # half-unit integers
+
+
+def counter_box(e):
+    cx, cy, rx, ry, a = e; r = math.radians(a)
+    return [cx, cy, 2 * math.sqrt((rx * math.cos(r)) ** 2 + (ry * math.sin(r)) ** 2), 2 * math.sqrt((rx * math.sin(r)) ** 2 + (ry * math.cos(r)) ** 2)]
 
 
 def main():
-    T = {n: placed('thought', n) for n in T_FRAMES}
-    C = {n: placed('courage', n) for n in C_FRAMES}
-    T = resample_glyph(T, T_PARENT, T_FRAMES)
-    C = resample_glyph(C, C_PARENT, C_FRAMES)
+    T = {n: frame_of('thought', n) for n in T_FRAMES}
+    C = {n: frame_of('courage', n) for n in C_FRAMES}
+    rings = {'thought': [[T[n][i] if i in RING['thought'] else None for i in range(len(T[n]))] for n in T_FRAMES],
+             'courage': [[C[n][i] if i in RING['courage'] else None for i in range(len(C[n]))] for n in C_FRAMES]}
+    # one entry per step between neighbouring scenes: matched corner lists for every straight piece
+    steps = []
+    for a, b in zip(ORDER, ORDER[1:]):
+        st = {}
+        for g, F, OF in (('thought', T, T_OF), ('courage', C, C_OF)):
+            fa, fb = F[T_FRAMES[OF[a]] if g == 'thought' else C_FRAMES[OF[a]]], F[T_FRAMES[OF[b]] if g == 'thought' else C_FRAMES[OF[b]]]
+            pieces = []
+            for i in range(len(fa)):
+                if i in RING[g]: pieces.append(None); continue
+                A2, B2 = match_polygons(fa[i], fb[i]); pieces.append([ints(A2), ints(B2)])
+            st[g] = pieces
+        steps.append(st)
+    counters = {}
+    for n in ORDER:
+        tf = T[T_FRAMES[T_OF[n]]]; cf = C[C_FRAMES[C_OF[n]]]
+        counters[n] = {'L': counter_box(tf[4]['i']), 'Rtop': counter_box(cf[0]['i']), 'Rbot': counter_box(cf[4]['i'])}
     scenes = []
     for n in ORDER:
         sc = {'id': n, 's': S[n], 'line': [round(LINES[n][0], 3), round(LINES[n][1], 2)], 'gapT': GAP_T[n], 'gapC': GAP_C[n],
               'thought': T_OF[n], 'courage': C_OF[n], 'text': {}, 'num': {}}
         for key, (txt, col, boxes) in PHRASES.items():
             if n in boxes: sc['text'][key] = boxes[n] + [1]
-            else:  # hidden: park it on the nearest scene that shows it so it fades in place
-                near = min(boxes, key=lambda m: abs(S[m] - S[n]))
-                sc['text'][key] = boxes[near] + [0]
-        cnt = COUNTERS.get(n if n != 'C100' else 'C92', {})
-        lab, c, h = NUM_L[n]
-        if c is None: rel = [0, 0]
-        else: L = COUNTERS[n]['L'] if n in COUNTERS and 'L' in COUNTERS[n] else cnt['L']; rel = [(c[0] - L[0]) / L[2], (c[1] - L[1]) / L[3]]
+            else:
+                near = min(boxes, key=lambda m: abs(S[m] - S[n])); sc['text'][key] = boxes[near] + [0]
+        lab, c, h = NUM_L[n]; L = counters[n]['L']
+        rel = [0, 0] if c is None else [(c[0] - L[0]) / L[2], (c[1] - L[1]) / L[3]]
         sc['num']['L'] = [lab, round(rel[0], 4), round(rel[1], 4), h, NUM_L_SHOW[n]]
-        lab, anchor, c = NUM_R[n]
-        cn = COUNTERS[n if n != 'T100' else 'T90b']['Rtop' if anchor == 'top' else 'Rbot']
+        lab, anchor, c = NUM_R[n]; cn = counters[n]['Rtop' if anchor == 'top' else 'Rbot']
         rel = [0, 0] if c is None else [(c[0] - cn[0]) / cn[2], (c[1] - cn[1]) / cn[3]]
         sc['num']['R'] = [lab, round(rel[0], 4), round(rel[1], 4), 30, NUM_R_SHOW[n], 1 if anchor == 'top' else 0]
         scenes.append(sc)
-    data = {'W': W, 'H': H, 'thought': [flat(T[n]) for n in T_FRAMES], 'courage': [flat(C[n]) for n in C_FRAMES],
-            'counters': {'thought': [4, 1], 'courageTop': [0, 1], 'courageBottom': [4, 1]},
+    data = {'W': W, 'H': H, 'rings': rings, 'steps': steps, 'ringPieces': RING,
             'phrases': {k: [v[0], v[1]] for k, v in PHRASES.items()}, 'scenes': scenes}
     s = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
     open(OUT, 'w', encoding='utf-8').write(s)
-    npts = lambda fr: sum(len(x) // 2 for pc in fr for x in pc)
-    print('saved', OUT, f'{len(s) / 1024:.0f} KB', ' points/frame: thought', npts(data['thought'][0]), 'courage', npts(data['courage'][0]))
+    print('saved', OUT, f'{len(s) / 1024:.0f} KB')
 
 
 if __name__ == '__main__':
