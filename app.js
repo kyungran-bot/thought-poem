@@ -108,14 +108,14 @@ function buildWords() {
         const [x0, y0, x1, y1] = w.box; words.push({ ...w, e, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, k: 0 });
     }
 }
-// pop: 0 -> slightly too big -> settle, about a third of a second; leaving is a quick shrink
-const pop = k => k <= 0 ? 0 : k >= 1 ? 1 : 1 + 2.70158 * Math.pow(k - 1, 3) + 1.70158 * Math.pow(k - 1, 2); // ease-out-back
+// appear: starts at 94 % size and settles to 100 % with a very small overshoot (no fade); leaving is a quick shrink
+const pop = k => k <= 0 ? 0 : k >= 1 ? 1 : .94 + .06 * (1 + 1.4 * Math.pow(k - 1, 3) + .4 * Math.pow(k - 1, 2));
 function updateWords(v, dt) {
     for (const w of words) {
         const on = active && v >= w.in && v < w.out;
-        w.k = clamp(w.k + (on ? dt / .32 : -dt / .14));
+        w.k = clamp(w.k + (on ? dt / .22 : -dt / .12));
         if (w.k <= 0) { w.e.style.display = 'none'; continue; }
-        const sc = on ? pop(w.k) : w.k, rot = w.rot ? ` rotate(${w.rot} ${w.cx} ${w.cy})` : '';
+        const sc = on ? pop(w.k) : .94 + .06 * w.k, rot = w.rot ? ` rotate(${w.rot} ${w.cx} ${w.cy})` : '';
         w.e.style.display = '';
         w.e.setAttribute('transform', `translate(${w.cx} ${w.cy}) scale(${sc.toFixed(4)}) translate(${-w.cx} ${-w.cy})${rot}`);
     }
