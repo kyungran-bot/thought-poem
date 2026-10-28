@@ -103,21 +103,23 @@ function buildWords() {
     for (const w of D.words) {
         const e = document.createElementNS(NS, 'text'); e.textContent = w.text; e.setAttribute('font-family', 'Pear'); e.style.display = 'none';
         $('words').append(e);
-        const p = { e, m: ink(w.text, 'Pear'), n: [...w.text].length };
-        placePhrase(p, w.box, 1); e.removeAttribute('opacity');
-        const [x0, y0, x1, y1] = w.box; words.push({ ...w, e, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, k: 0 });
+        words.push({ ...w, e, p: { e, m: ink(w.text, 'Pear'), n: [...w.text].length }, k: 0 });
     }
 }
-// appear: starts at 94 % size and settles to 100 % with a very small overshoot (no fade); leaving is a quick shrink
+// appear: 94 % -> 100 % in about 0.2 s, no fade; leaving is a quick shrink
 const pop = k => k <= 0 ? 0 : k >= 1 ? 1 : .94 + .06 * (1 + 1.4 * Math.pow(k - 1, 3) + .4 * Math.pow(k - 1, 2));
+// words land at the 59 scene, glide gently to their 89 places, and stay; extra 할까말까 appear where they stay
 function updateWords(v, dt) {
+    const [s59, s89] = D.wordScenes, u = ease(clamp((v - s59) / (s89 - s59)));
     for (const w of words) {
-        const on = active && v >= w.in && v < w.out;
+        const on = active && v >= w.in;
         w.k = clamp(w.k + (on ? dt / .22 : -dt / .12));
         if (w.k <= 0) { w.e.style.display = 'none'; continue; }
-        const sc = on ? pop(w.k) : .94 + .06 * w.k, rot = w.rot ? ` rotate(${w.rot} ${w.cx} ${w.cy})` : '';
+        const box = w.box ? w.box.map((x, i) => mix(x, w.box2[i], u)) : w.box2;
+        placePhrase(w.p, box, 1); w.e.removeAttribute('opacity');
+        const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2, sc = on ? pop(w.k) : .94 + .06 * w.k;
         w.e.style.display = '';
-        w.e.setAttribute('transform', `translate(${w.cx} ${w.cy}) scale(${sc.toFixed(4)}) translate(${-w.cx} ${-w.cy})${rot}`);
+        w.e.setAttribute('transform', `translate(${cx} ${cy}) scale(${sc.toFixed(4)}) translate(${-cx} ${-cy})` + (w.rot ? ` rotate(${w.rot} ${cx} ${cy})` : ''));
     }
 }
 const nums = {};

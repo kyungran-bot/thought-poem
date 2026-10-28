@@ -61,7 +61,8 @@ SLIDE = set()
 # steps where shapes should pair by where they are on screen (the long band retracts into the short leg)
 NEAR = {('T90a', 'T90b', 'thought', 5)}
 # outlined words (Pear) that pop in one by one up to the 59 scene (screenshot at s = 0.4056) and pop out before 65
-WORDS = [{"text": "고민 불안", "box": [1266.2, 265.3, 1477.4, 342.4], "rot": 0, "in": 0.04, "out": 0.475}, {"text": "어떡하지", "box": [850.9, 226.7, 1096.4, 331.0], "rot": 0, "in": 0.09, "out": 0.46}, {"text": "음...", "box": [527.5, 365.0, 666.9, 448.9], "rot": 180, "in": 0.14, "out": 0.49}, {"text": "할까말까", "box": [716.5, 518.1, 877.1, 582.7], "rot": 0, "in": 0.19, "out": 0.445}, {"text": "할까말까", "box": [716.5, 604.3, 877.1, 667.7], "rot": 0, "in": 0.235, "out": 0.435}, {"text": "할까말까", "box": [716.5, 690.5, 877.1, 753.9], "rot": 0, "in": 0.28, "out": 0.425}, {"text": "걱정", "box": [221.3, 629.2, 422.4, 790.2], "rot": 0, "in": 0.33, "out": 0.455}, {"text": "음...", "box": [18.2, 961.4, 163.7, 1054.3], "rot": 0, "in": 0.375, "out": 0.47}]
+WORDS = [{"text": "고민 불안", "rot": 0, "box": [1266.2, 265.3, 1477.4, 342.4], "box2": [1492.0, 153.9, 1719.2, 237.6], "in": 0.385}, {"text": "어떡하지", "rot": 0, "box": [850.9, 226.7, 1096.4, 331.0], "box2": [1683.6, 253.4, 1929.1, 357.7], "in": 0.388}, {"text": "음...", "rot": 180, "box": [527.5, 365.0, 666.9, 448.9], "box2": [623.7, 392.6, 766.4, 480.8], "in": 0.391}, {"text": "할까말까", "rot": 0, "box": [716.5, 518.1, 877.1, 582.7], "box2": [803.1, 713.9, 979.4, 785.1], "in": 0.394}, {"text": "할까말까", "rot": 0, "box": [716.5, 604.3, 877.1, 667.7], "box2": [803.1, 799.8, 979.4, 871.1], "in": 0.397}, {"text": "할까말까", "rot": 0, "box": [716.5, 690.5, 877.1, 753.9], "box2": [803.1, 885.8, 979.4, 957.1], "in": 0.4}, {"text": "걱정", "rot": 0, "box": [221.3, 629.2, 422.4, 790.2], "box2": [261.9, 647.1, 478.0, 814.5], "in": 0.403}, {"text": "음...", "rot": 0, "box": [18.2, 961.4, 163.7, 1054.3], "box2": [11.2, 968.4, 153.9, 1056.6], "in": 0.4056}, {"text": "할까말까", "rot": 0, "box": None, "box2": [985.5, 713.9, 1161.8, 785.1], "in": 0.44}, {"text": "할까말까", "rot": 0, "box": None, "box2": [1167.9, 713.9, 1344.2, 785.1], "in": 0.4686}, {"text": "할까말까", "rot": 0, "box": None, "box2": [985.5, 799.8, 1161.8, 871.1], "in": 0.4971}, {"text": "할까말까", "rot": 0, "box": None, "box2": [1269.8, 539.6, 1446.1, 610.9], "in": 0.5257}, {"text": "할까말까", "rot": 0, "box": None, "box2": [1452.2, 539.6, 1628.5, 610.9], "in": 0.5543}, {"text": "할까말까", "rot": 0, "box": None, "box2": [1634.6, 539.6, 1811.0, 610.9], "in": 0.5829}, {"text": "할까말까", "rot": 0, "box": None, "box2": [1269.8, 627.9, 1446.1, 699.1], "in": 0.6114}, {"text": "할까말까", "rot": 0, "box": None, "box2": [1452.2, 627.9, 1628.5, 699.1], "in": 0.64}]
+WORD_SCENES = [0.4056, 0.6653]  # 59 and 89 screenshots
 RING = {'thought': [4], 'courage': [0, 4]}  # pieces that are ㅇ rings (outer + counter)
 ROTATED = {('courage', 'C85', 0), ('courage', 'C92', 0)}  # 용 top ring is drawn tilted in these scenes
 
@@ -214,7 +215,7 @@ def main():
         sc['num']['R'] = [lab, round(rel[0], 4), round(rel[1], 4), 30, NUM_R_SHOW[n], 1 if anchor == 'top' else 0]
         scenes.append(sc)
     data = {'W': W, 'H': H, 'rings': rings, 'steps': steps, 'ringPieces': RING,
-            'phrases': {k: [v[0], v[1]] for k, v in PHRASES.items()}, 'words': WORDS, 'scenes': scenes}
+            'phrases': {k: [v[0], v[1]] for k, v in PHRASES.items()}, 'words': WORDS, 'wordScenes': WORD_SCENES, 'scenes': scenes}
     s = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
     open(OUT, 'w', encoding='utf-8').write(s)
     print('saved', OUT, f'{len(s) / 1024:.0f} KB')
