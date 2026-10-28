@@ -32,9 +32,17 @@ function buildGlyph(name, group) {
     D.rings[name][0].forEach(() => { const e = document.createElementNS(NS, 'path'); e.setAttribute('fill-rule', 'evenodd'); group.append(e); glyphEls[name].push(e); });
 }
 const f1 = v => v.toFixed(1);
+// Ellipses are drawn as dense polygons: SVG half-arcs whose end points get rounded become ambiguous and make the
+// ring jump between two solutions from frame to frame (the trembling).
+const RING_N = 180, COS = [], SIN = [];
+for (let k = 0; k < RING_N; k++) { COS.push(Math.cos(2 * Math.PI * k / RING_N)); SIN.push(Math.sin(2 * Math.PI * k / RING_N)); }
 function ellipsePath([cx, cy, rx, ry, a]) {
-    const r = a * Math.PI / 180, ux = Math.cos(r) * rx, uy = Math.sin(r) * rx;
-    return `M${f1(cx + ux)} ${f1(cy + uy)}A${f1(rx)} ${f1(ry)} ${a.toFixed(2)} 1 1 ${f1(cx - ux)} ${f1(cy - uy)}A${f1(rx)} ${f1(ry)} ${a.toFixed(2)} 1 1 ${f1(cx + ux)} ${f1(cy + uy)}Z`;
+    const r = a * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r); let d = '';
+    for (let k = 0; k < RING_N; k++) {
+        const x = rx * COS[k], y = ry * SIN[k];
+        d += (k ? 'L' : 'M') + (cx + x * c - y * sn).toFixed(2) + ' ' + (cy + x * sn + y * c).toFixed(2);
+    }
+    return d + 'Z';
 }
 function ellipseBox([cx, cy, rx, ry, a]) {
     const r = a * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
