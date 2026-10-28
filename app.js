@@ -86,7 +86,7 @@ const phrases = {};
 function buildPhrases() {
     for (const [key, [str, colour]] of Object.entries(D.phrases)) {
         const e = document.createElementNS(NS, 'text'); e.textContent = str; e.setAttribute('font-family', 'Pear'); e.setAttribute('opacity', 0);
-        (colour === 'white' ? $('blackText') : $('whiteText')).append(e);
+        $('labels').append(e); // white + difference blend: always the opposite colour of whatever is underneath
         phrases[key] = { e, m: ink(str, 'Pear'), n: [...str].length };
     }
 }
@@ -98,7 +98,7 @@ function placePhrase(p, box, op) {
 }
 const nums = {};
 function buildNumbers() {
-    for (const [key, parent] of [['L', 'blackText'], ['Rtop', 'whiteText'], ['Rbot', 'whiteText']]) {
+    for (const [key, parent] of [['L', 'labels'], ['Rtop', 'labels'], ['Rbot', 'labels']]) {
         const e = document.createElementNS(NS, 'text'); e.setAttribute('font-family', 'Neurimbo'); e.setAttribute('opacity', 0); $(parent).append(e); nums[key] = e;
     }
 }
