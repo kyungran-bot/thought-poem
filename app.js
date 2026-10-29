@@ -10,7 +10,6 @@ const handover = (a, b, t) => a === b ? a : a > b ? mix(b, a, clamp(1 - 2 * t)) 
 const RATE_THOUGHT = 1 / 16, RATE_COURAGE = 1 / 10; // progress per second while the pointer stays on that side
 let D = null, W = 1920, H = 1077;
 let active = false, inside = false, s = 0, offset = 0, shown = 0, px = 960, py = 540, last = 0, lastKey = '';
-let angle = -.511, targetAngle = -.511, compassOp = 1;
 let line = { c: Math.cos(1), sn: Math.sin(1), t: 0 };
 const dist = (x, y) => x * line.c + y * line.sn - line.t; // < 0 : black (생각) side
 
@@ -190,22 +189,6 @@ function draw(v) {
     const vis = handover(a.num.R[4], b.num.R[4], t), top = handover(a.num.R[5], b.num.R[5], t), bot = handover(1 - a.num.R[5], 1 - b.num.R[5], t);
     placeNumber(nums.Rtop, label, cb.Rtop, rt[0], rt[1], R[3], shown * vis * top);
     placeNumber(nums.Rbot, label, cb.Rbot, rb[0], rb[1], R[3], shown * vis * bot);
-    // compass: half white / half black disc in the middle of the line, shown only before the first click
-    compassOp = active ? 0 : 1; // only on the first screen, gone the moment the piece starts (no fade)
-    const hits = []; const c = Math.cos(th), sn = Math.sin(th);
-    for (const x of [0, W]) { const y = (lt - x * c) / sn; if (y >= 0 && y <= H) hits.push([x, y]); }
-    for (const y of [0, H]) { const x = (lt - y * sn) / c; if (x >= 0 && x <= W) hits.push([x, y]); }
-    compassAt = hits.length >= 2 ? [(hits[0][0] + hits[1][0]) / 2, (hits[0][1] + hits[1][1]) / 2] : null;
-}
-let compassAt = null;
-function drawCompass(dt) {
-    angle += Math.atan2(Math.sin(targetAngle - angle), Math.cos(targetAngle - angle)) * (1 - Math.exp(-dt * 8));
-    const g = $('compass');
-    if (!compassAt || compassOp < .002) { g.setAttribute('opacity', 0); return; }
-    // the drawing is stretched with the screen, so undo that for the disc to stay round
-    const r = $('art').getBoundingClientRect(), k = (r.width / W) / (r.height / H);
-    g.setAttribute('transform', `translate(${compassAt[0].toFixed(1)} ${compassAt[1].toFixed(1)}) scale(${(1 / Math.sqrt(k)).toFixed(4)} ${Math.sqrt(k).toFixed(4)}) rotate(${(angle * 180 / Math.PI).toFixed(2)})`);
-    g.setAttribute('opacity', compassOp.toFixed(3));
 }
 
 // ---------- interaction ----------
@@ -217,19 +200,18 @@ function tick(time) {
         // (no pointer-depth nudge: it fed back through the moving line and made the rings tremble)
         offset = 0;
         shown = mix(shown, active ? 1 : 0, 1 - Math.exp(-dt * 3)); if (Math.abs(shown - (active ? 1 : 0)) < .001) shown = active ? 1 : 0;
-        const v = clamp(s + offset * (1 - Math.abs(s)), -1, 1); draw(v); drawCompass(dt); updateWords(v, dt);
+        const v = clamp(s + offset * (1 - Math.abs(s)), -1, 1); draw(v); updateWords(v, dt);
     }
     requestAnimationFrame(tick);
 }
 function move(e) {
     const r = $('art').getBoundingClientRect(), nx = (e.clientX - r.left) / r.width * W, ny = (e.clientY - r.top) / r.height * H;
-    if (Math.hypot(nx - px, ny - py) > 1) targetAngle = Math.atan2(ny - py, nx - px); // the disc turns toward where the pointer heads
     px = nx; py = ny; inside = true;
     const dot = $('cursorDot'); dot.style.left = e.clientX + 'px'; dot.style.top = e.clientY + 'px'; dot.style.opacity = e.pointerType === 'touch' ? '0' : '1';
 }
 $('art').addEventListener('pointermove', move);
 $('art').addEventListener('pointerleave', () => { inside = false; $('cursorDot').style.opacity = 0; });
-function start() { active = true; inside = true; $('start').hidden = true; $('compass').setAttribute('opacity', 0); compassOp = 0; }
+function start() { active = true; inside = true; $('start').hidden = true; }
 function reset() { active = false; s = 0; offset = 0; $('start').hidden = false; }
 $('start').addEventListener('pointerdown', e => { move(e); start(); });
 $('start').addEventListener('click', () => { if (!active) start(); });
