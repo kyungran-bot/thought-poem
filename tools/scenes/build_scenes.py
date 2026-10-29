@@ -23,7 +23,7 @@ S = {'C100': -1, 'C92': -.75, 'C85': -.5, 'C70': -.25, 'A50': 0,
      'T52': 1 / 6, 'T55': 2 / 6, 'T65': 3 / 6, 'T90a': 4 / 6, 'T90b': 5 / 6, 'T100': 1}
 # gutter between each word and the dividing line (chosen inside the range that reproduces each screenshot)
 GAP_T = {'A50': 0, 'T52': 0, 'T55': 33, 'T65': 32, 'T90a': 30, 'T90b': 30, 'T100': 30, 'C70': 0, 'C85': 0, 'C92': 0, 'C100': 0}
-GAP_C = {'A50': 20, 'T52': 20, 'T55': 21, 'T65': 38, 'T90a': 9, 'T90b': 3, 'T100': 3, 'C70': 28, 'C85': 32, 'C92': 30, 'C100': 30}
+GAP_C = {n: 0 for n in ['A50', 'T52', 'T55', 'T65', 'T90a', 'T90b', 'T100', 'C70', 'C85', 'C92', 'C100']}  # 용기 meets the line directly (no white gutter)
 
 # glyph frames (one per scene that shows its own drawing)
 T_FRAMES = ['A50', 'T52', 'T55', 'T65', 'T90a', 'T90b', 'T100', 'C70', 'C85', 'C92']
